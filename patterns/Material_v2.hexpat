@@ -72,25 +72,55 @@ struct materialparametersheader { // header for material data and other stuff
     padding [60];
 };
 enum ParameterType : u32 {
-    bitmap = 0x00000001,
-    real = 0x00000000,
-    //int = 0x03000000, //need an example to know what the number should be
-    //boolean = 0x04000000,
+    bitmap = 0x00000000,
+    real = 0x00000001,
+    int = 0x00000002, //may be wrong
+    boolean = 0x00000003, //may be wrong
     color = 0x00000004
 };
 
 struct materialparameters { //material data
     u32 ParameterName; //have to figure out how to dehash
     ParameterType ParameterType;
-    u32 ParameterIndex;
-    padding [8];
-    u32 bitmapTagType;
-    u32 bitmapTagID;
-    padding [20];
-    float ARGB [4];
-    float UVScale [2];
-    float AllTheRest [9];
-    padding [124];
+    if (ParameterType == ParameterType::bitmap) {
+        u32 ParameterIndex;
+        padding [8];
+        u32 bitmapTagType;
+        u32 bitmapTagID;
+        padding [20];
+        float Data [4];
+        float UVScale [2];
+        float OtherData [9];
+        padding [124];
+    }
+    if (ParameterType == ParameterType::color) {
+        u32 ParameterIndex;
+        padding [36];
+        float ARGB [4];
+        float OtherData [11];
+        padding [124];
+    }
+    if (ParameterType == ParameterType::real) {
+        u32 ParameterIndex;
+        padding [52];
+        float Real;
+        float OtherData [10];
+        padding [124];
+    }    
+    if (ParameterType == ParameterType::boolean) {
+        u32 ParameterIndex;
+        padding [68];
+        u32 boolean;
+        float OtherData [6];
+        padding [124];
+    }    
+    if (ParameterType == ParameterType::int) {
+        u32 ParameterIndex;
+        padding [68];
+        u32 integer;
+        float OtherData [6];
+        padding [124];
+    }    
 };
 
 struct block11 { // unkown, i also dont know how to find how many of these blocks there are
