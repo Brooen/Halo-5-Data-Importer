@@ -127,4 +127,4 @@ struct dynamic {
 };
 
 static StaticMaterialParams @ 0x00;
-//dynamic DynamicMaterialParams @$;
+dynamic DynamicMaterialParams @$;
