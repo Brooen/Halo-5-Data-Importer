@@ -45,6 +45,11 @@ struct block6 {
     u32 stuff3 [2];
 };
 
+struct StringTable {
+    if ($-parent.beginBlock >= parent.header.block7count)
+        break;
+    char string[];
+};  
 struct textures2header {
     padding [4];
     u32 globalID;
@@ -66,10 +71,17 @@ struct materialparametersheader { // header for material data and other stuff
     u32 materialparameterscount;
     padding [60];
 };
+enum ParameterType : u32 {
+    bitmap = 0x00000001,
+    real = 0x00000000,
+    //int = 0x03000000, //need an example to know what the number should be
+    //boolean = 0x04000000,
+    color = 0x00000004
+};
 
 struct materialparameters { //material data
     u32 ParameterName; //have to figure out how to dehash
-    u32 ParameterType;
+    ParameterType ParameterType;
     u32 ParameterIndex;
     padding [8];
     u32 bitmapTagType;
@@ -98,7 +110,9 @@ struct static {
     block4 block4 [header.block4count];
     block5 block5 [header.block5count];
     block6 block6 [header.block6count];
-    padding [header.block7count];
+    u64 beginBlock = $;
+    StringTable stringtable[while(true)];
+    //padding [header.block7count];
     padding [60];
     textures2header textures2header [header.texturescount - 1];
     padding [4];
@@ -113,4 +127,4 @@ struct dynamic {
 };
 
 static StaticMaterialParams @ 0x00;
-dynamic DynamicMaterialParams @$;
+//dynamic DynamicMaterialParams @$;
