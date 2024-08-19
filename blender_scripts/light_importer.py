@@ -3,6 +3,9 @@ import bpy
 import os
 
 def create_light(light_type, name, location, rotation, color, intensity, area_size=None, spot_cone=None):
+    # Multiply location coordinates by 3.048
+    location = tuple(coord * 3.048 for coord in location) 
+    
     # Determine light type for Blender
     light_data = bpy.data.lights.new(name=name, type=light_type)
     light_data.color = color
