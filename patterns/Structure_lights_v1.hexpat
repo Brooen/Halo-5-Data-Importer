@@ -66,9 +66,9 @@ struct textures2 {
 //dynamic
 
 enum lighttype : u32 {
-Omni = 0x00000000, //spot i think
+Omni = 0x00000000, //point
 Spot = 0x00000001,
-Directional = 0x00000002, //sun?
+Directional = 0x00000002, //spot
 Planar = 0x00000003, // area
 Sun = 0x00000004
 };
