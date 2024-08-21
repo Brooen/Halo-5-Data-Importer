@@ -7,7 +7,7 @@ from bpy.props import StringProperty, CollectionProperty, BoolProperty, IntPrope
 from bpy.types import AddonPreferences, Operator, Panel, PropertyGroup, UIList
 
 bl_info = {
-    "name": "Halo 5 Data Exporter",
+    "name": "Halo 5 Data Importer",
     "author": "Brooen",    
     "blender": (4, 1, 1),
     "category": "Object",
@@ -64,6 +64,43 @@ class FILE_OT_load_light_files(Operator):
                 if file_name.endswith(".structure_lights"):  # Filter by extension if necessary
                     item = context.scene.light_files.add()
                     item.name = file_name
+
+        return {'FINISHED'}
+
+# Operator to import selected light files
+# Operator to import selected light files using the light_importer.py script
+class FILE_OT_import_lights(Operator):
+    bl_idname = "file.import_lights"
+    bl_label = "Import Selected Lights"
+
+    def execute(self, context):
+        prefs = context.preferences.addons[__name__].preferences
+        directory = prefs.light_dir
+
+        selected_files = [os.path.join(directory, item.name) for item in context.scene.light_files if item.select]
+
+        if not selected_files:
+            self.report({'WARNING'}, "No light files selected")
+            return {'CANCELLED'}
+
+        try:
+            # Import the light_importer script and run the read_binary_file_and_create_lights function
+            script_path = os.path.join(os.path.dirname(__file__), "light_importer.py")
+            if os.path.exists(script_path):
+                spec = importlib.util.spec_from_file_location("light_importer", script_path)
+                light_importer = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(light_importer)
+
+                # Run the imported script's function with the selected files
+                light_importer.read_binary_file_and_create_lights(selected_files)
+
+                self.report({'INFO'}, "Selected lights imported successfully")
+            else:
+                self.report({'ERROR'}, "light_importer script not found.")
+                return {'CANCELLED'}
+        except Exception as e:
+            self.report({'ERROR'}, f"Failed to import lights: {e}")
+            return {'CANCELLED'}
 
         return {'FINISHED'}
 
@@ -132,7 +169,7 @@ class FILE_UL_light_file_list(UIList):
 class VIEW3D_PT_light_importer_panel(Panel):
     bl_idname = "VIEW3D_PT_light_importer_panel"
     bl_label = "Import Menu"
-    bl_category = "Halo 5 Data Exporter"
+    bl_category = "Halo 5 Data Importer"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_context = "objectmode"
@@ -143,6 +180,7 @@ class VIEW3D_PT_light_importer_panel(Panel):
         # Light Importer Dropdown
         box = layout.box()
         box.label(text="Light Importer")
+        box.operator("file.load_light_files", text="Load Light Files")
         box.template_list("FILE_UL_light_file_list", "", context.scene, "light_files", context.scene, "light_file_index")
         box.operator("file.import_lights", text="Import Selected Lights")
 
@@ -157,9 +195,9 @@ classes = (
     LightFileItem,
     LightImporterAddonPreferences,
     FILE_OT_load_light_files,
+    FILE_OT_import_lights,
     FILE_OT_install_mmh3,
     FILE_OT_run_material_importer,
-    FILE_OT_import_lights,
     FILE_UL_light_file_list,
     VIEW3D_PT_light_importer_panel,
 )
