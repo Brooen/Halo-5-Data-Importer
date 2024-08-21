@@ -1,15 +1,16 @@
 import struct
 import bpy
 import os
+import mathutils
 
-def create_light(light_type, name, location, rotation, color, intensity, area_size=None, spot_cone=None):
+def create_light(light_type, name, location, rotation_values, color, intensity, area_size=None, spot_cone=None):
     # Multiply location coordinates by 3.048
-    location = tuple(coord * 3.048 for coord in location) 
+    location = (location[0] * 3.048, location[1] * 3.048, location[2] * 3.048)
     
     # Determine light type for Blender
     light_data = bpy.data.lights.new(name=name, type=light_type)
     light_data.color = color
-    light_data.energy = intensity * 10  # Multiply the light's strength by 2
+    light_data.energy = intensity * 10  # Multiply the light's strength by 10
 
     if light_type == 'AREA' and area_size:
         light_data.size = area_size[0]
@@ -21,9 +22,20 @@ def create_light(light_type, name, location, rotation, color, intensity, area_si
 
     light_object = bpy.data.objects.new(name, light_data)
     light_object.location = location
-    light_object.rotation_mode = 'QUATERNION'
-    light_object.rotation_quaternion = rotation
+    
 
+    
+    # Create an Euler rotation and apply the rotations
+    i, j, k, w = rotation_values  # Extract the rotation values
+    rotation = mathutils.Euler()
+    rotation.rotate_axis('X', k)
+    rotation.rotate_axis('Y', -j)  # Inverting the Y rotation
+    rotation.rotate_axis('Z', i)
+
+    light_object.rotation_euler = rotation
+
+    bpy.context.collection.objects.link(light_object)
+    
     return light_object
 
 def read_binary_file_and_create_lights(filepaths):
@@ -74,7 +86,7 @@ def read_binary_file_and_create_lights(filepaths):
 
                 # Prepare the data to create a light in Blender
                 location = (x, y, z)
-                rotation = (w, i, j, k)
+                rotation_values = (i, j, k, w)  # Pass the rotation as a tuple
                 color = (r, g, b)
 
                 # Create the light in Blender
@@ -82,7 +94,7 @@ def read_binary_file_and_create_lights(filepaths):
                     light_type=light_type,
                     name=f"Light_{index + 1}",
                     location=location,
-                    rotation=rotation,
+                    rotation_values=rotation_values,  # Use rotation_values instead of rotation
                     color=color,
                     intensity=intensity,
                     area_size=(area_width, area_height) if light_type == 'AREA' else None,
