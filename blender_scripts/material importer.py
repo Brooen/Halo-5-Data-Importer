@@ -57,8 +57,35 @@ def extract_filename_from_path(file_path):
     # Extract the file name without the extension
     return file_path.split('\\')[-1].split('.')[0]
 
-def create_shader_in_blender(shader_name, parameters):
-    """Creates or updates a shader node group in Blender based on the provided parameters."""
+def find_material_file(material_name, search_folder):
+    """Find the corresponding .material file for a given material name in the specified folder."""
+    for root, dirs, files in os.walk(search_folder):
+        for file in files:
+            if file.lower() == f"{material_name.lower()}.material":
+                return os.path.join(root, file)
+    return None
+
+def apply_material_from_file(material_name, material_file, id_mapping_filepath, base_texture_path):
+    """Apply the material processed from a .material file to the selected Blender material."""
+    if material_file:
+        print(f"Processing material file: {material_file}")
+        
+        # Get the active material and create shader for it
+        material = bpy.data.materials.get(material_name)
+        if material and material.use_nodes:
+            try:
+                # Process the material file and create the shader
+                process_binary_file(material_file, id_mapping_filepath, base_texture_path, material)
+            except Exception as e:
+                print(f"Error processing material '{material_name}': {e}. Skipping this material.")
+        else:
+            print(f"No valid material found for '{material_name}' or material does not use nodes.")
+        
+    else:
+        print(f"Material file for '{material_name}' not found.")
+
+def create_shader_in_blender(shader_name, parameters, material):
+    """Creates or updates a shader node group in Blender and applies it to the given material."""
     # Ensure the node group exists
     node_group_name = f"H5 material_shader: {shader_name}"
     if node_group_name not in bpy.data.node_groups:
@@ -67,17 +94,13 @@ def create_shader_in_blender(shader_name, parameters):
     
     node_group = bpy.data.node_groups[node_group_name]
     
-    # Get the active material of the selected object
-    obj = bpy.context.active_object
-    if not obj or not obj.active_material:
-        print("No active object with an active material found.")
-        return
-    
-    material = obj.active_material
     material.use_nodes = True
     nodes = material.node_tree.nodes
     links = material.node_tree.links
-    
+
+    # Clear existing nodes
+    nodes.clear()
+
     # Create a UV Map node
     uv_map_node = nodes.new('ShaderNodeUVMap')
     uv_map_node.name = "UV Map"
@@ -108,7 +131,7 @@ def create_shader_in_blender(shader_name, parameters):
             print(f"Loading texture from path: {texture_path}")
             image = bpy.data.images.load(texture_path)
             
-            # Create or find the texture node
+            # Create the texture node
             tex_node = nodes.new('ShaderNodeTexImage')
             tex_node.name = param_name
             tex_node.label = param_name
@@ -145,13 +168,28 @@ def create_shader_in_blender(shader_name, parameters):
             links.new(mapping_node.outputs['Vector'], tex_node.inputs['Vector'])
             print(f"Connected mapping node to texture node.")
 
-            # Connect the texture node to the appropriate input of the group node
-            if param_name in group_node.inputs.keys():
-                links.new(tex_node.outputs['Color'], group_node.inputs[param_name])
-                print(f"Connected texture node to group node input '{param_name}'.")
+            if param_data.get('normalized', 1) == 0:
+                # Find the existing Normalize node group
+                normalize_node = nodes.new('ShaderNodeGroup')
+                normalize_node.node_tree = bpy.data.node_groups.get("Normalize")
+                normalize_node.location = (x_offset, y_offset)
+                y_offset += y_step  # Move down for the next node
+                print(f"Using existing Normalize node group at location {normalize_node.location}.")
+
+                # Connect the texture node to the normalize vector input
+                links.new(tex_node.outputs['Color'], normalize_node.inputs['Vector'])
+
+                # Connect normalize output to the appropriate input of the group node
+                if param_name in group_node.inputs.keys():
+                    links.new(normalize_node.outputs['Vector'], group_node.inputs[param_name])
+                    print(f"Connected normalize node output to group node input '{param_name}'.")
+            else:
+                # Connect the texture node directly to the appropriate input of the group node
+                if param_name in group_node.inputs.keys():
+                    links.new(tex_node.outputs['Color'], group_node.inputs[param_name])
+                    print(f"Connected texture node to group node input '{param_name}'.")
 
         elif param_data['type'] == 'color':
-            # Apply color parameter directly without creating a new shader node
             if param_name in group_node.inputs.keys():
                 group_node.inputs[param_name].default_value = param_data['value']
                 print(f"Set color parameter '{param_name}' to {param_data['value']}")
@@ -235,7 +273,8 @@ def process_block(file, id_mapping, previous_id, string_table, base_texture_path
                     'type': 'bitmap',
                     'value': full_texture_path,
                     'curve': bitmap_info['curve'],
-                    'uv_scale': uv_scale
+                    'uv_scale': uv_scale,
+                    'normalized': bitmap_info['normalized']  # Pass the normalized value
                 }
             else:
                 print(f"Texture file does not exist: {full_texture_path}")
@@ -244,7 +283,15 @@ def process_block(file, id_mapping, previous_id, string_table, base_texture_path
         parameter_index = read_u32(file)
         file.seek(36, 1)  # Skip 8 bytes of padding
         argb = struct.unpack('<4f', file.read(16))
-        parameters[matching_string] = {'type': 'color', 'value': argb}
+        
+        # Convert ARGB to RGBA
+        rgba = (argb[1], argb[2], argb[3], argb[0])
+        
+        parameters[matching_string] = {
+            'type': 'color', 
+            'value': rgba, 
+            'normalized': id_mapping.get(previous_id, {}).get('normalized', 1)  # Pass the normalized value
+        }
         file.seek(168, 1)  # Skip 124 bytes of padding
 
     elif parameter_type == 1:  # real
@@ -268,10 +315,9 @@ def process_block(file, id_mapping, previous_id, string_table, base_texture_path
         parameters[matching_string] = {'type': 'int', 'value': int_value}
         file.seek(148, 1)  # Skip 124 bytes of padding
 
-
     return matching_string, parameters
 
-def process_secondary_header(file, id_mapping, string_table, base_texture_path):
+def process_secondary_header(file, id_mapping, string_table, base_texture_path, material):
     # Skip the first 28 bytes
     file.seek(28, 1)
     
@@ -307,75 +353,72 @@ def process_secondary_header(file, id_mapping, string_table, base_texture_path):
             all_parameters.update(parameters)
     
     # Apply the parameters to the shader in Blender
-    create_shader_in_blender(shader_name, all_parameters)
+    create_shader_in_blender(shader_name, all_parameters, material)
 
-def process_binary_file(material_filepath, id_mapping_filepath, base_texture_path):
-    # Load the ID mapping from the file
-    id_mapping = load_id_mapping(id_mapping_filepath)
-    
-    with open(material_filepath, 'rb') as f:
-        # Previous steps for skipping and reading initial data
-        f.seek(28)
-        u32_values = [read_u32(f) for _ in range(13)]
-        skip_bytes = (
-            u32_values[0] * 24 +
-            u32_values[1] * 16 +
-            u32_values[2] * 32 +
-            u32_values[3] * 20 +
-            u32_values[4] * 16 +
-            u32_values[5] * 8
-        )
-        string_table_offset = f.tell() + skip_bytes
-        f.seek(string_table_offset)
-        string_table_length = u32_values[6]
-        string_table = read_string_table(f, string_table_length)
-
-        # Print the string table (for demonstration purposes)
-        print("String table:")
-        for s, h in string_table:
-            print(f"String: {s}, Hashed: {h:#010x}")      
-        # Skip the number of bytes equal to u32[7]
-        f.seek(u32_values[7], 1)
+def process_binary_file(material_filepath, id_mapping_filepath, base_texture_path, material):
+    try:
+        print(f"Processing material file: {material_filepath}")
+        # Load the ID mapping from the file
+        id_mapping = load_id_mapping(id_mapping_filepath)
         
-        # Skip the calculated bytes based on u32[0]
-        f.seek((u32_values[0] - 1) * 52, 1)
+        with open(material_filepath, 'rb') as f:
+            # Previous steps for skipping and reading initial data
+            f.seek(28)
+            u32_values = [read_u32(f) for _ in range(13)]
+            skip_bytes = (
+                u32_values[0] * 24 +
+                u32_values[1] * 16 +
+                u32_values[2] * 32 +
+                u32_values[3] * 20 +
+                u32_values[4] * 16 +
+                u32_values[5] * 8
+            )
+            string_table_offset = f.tell() + skip_bytes
+            f.seek(string_table_offset)
+            string_table_length = u32_values[6]
+            string_table = read_string_table(f, string_table_length)
+
+            # Print the string table (for demonstration purposes)
+            print("String table:")
+            for s, h in string_table:
+                print(f"String: {s}, Hashed: {h:#010x}")      
+            # Skip the number of bytes equal to u32[7]
+            f.seek(u32_values[7], 1)
+            
+            # Skip the calculated bytes based on u32[0]
+            f.seek((u32_values[0] - 1) * 52, 1)
+            
+            # Now process the secondary header
+            process_secondary_header(f, id_mapping, string_table, base_texture_path, material)
+    except Exception as e:
+        print(f"Failed to process material file '{material_filepath}': {e}. Skipping.")
         
-        # Now process the secondary header
-        process_secondary_header(f, id_mapping, string_table, base_texture_path)
+def main():
+    # Specify the folder to search for .material files
+    search_folder = r"F:\halo models\Raw Files\Halo 5 Materials"  # Update this path to your folder
+    base_texture_path = r"F:\halo models\Raw Files\H5 Textures"  # Base texture path
+    id_mapping_filepath = r"C:\Users\abfer\Downloads\filepaths.txt"  # ID mapping file path
 
-def find_material_file(material_name, folder_path):
-    """Search for a .material file that matches the material name in the specified folder."""
-    for root, dirs, files in os.walk(folder_path):
-        for file in files:
-            if file.endswith('.material') and file.startswith(material_name):
-                return os.path.join(root, file)
-    return None
-
-def apply_material_from_file(folder_path, id_mapping_filepath, base_texture_path):
-    """Find and apply the material from a .material file based on the selected object's material."""
+    # Get the active object
     obj = bpy.context.active_object
-    if not obj or not obj.material_slots:
-        print("No active object with materials found.")
+    if not obj:
+        print("No active object found.")
         return
-    
+
+    # Iterate through all materials on the active object
     for material_slot in obj.material_slots:
-        material_name = material_slot.material.name
-        print(f"Searching for material: {material_name}")
-        
-        material_filepath = find_material_file(material_name, folder_path)
-        
-        if not material_filepath:
-            print(f"No .material file found for {material_name} in {folder_path}.")
-            continue
-        
-        print(f"Found .material file: {material_filepath}")
-        
-        # Process the found .material file
-        process_binary_file(material_filepath, id_mapping_filepath, base_texture_path)
+        material = material_slot.material
+        if not material:
+            continue  # Skip empty material slots
 
-# Example usage
-folder_path = r"F:\halo models\Raw Files\Halo 5 Materials"
-id_mapping_filepath = r"C:\Users\abfer\Downloads\filepaths.txt"
-base_texture_path = r"F:\halo models\Raw Files\H5 Textures"
+        material_name = material.name
+        print(f"Processing material: {material_name}")
 
-apply_material_from_file(folder_path, id_mapping_filepath, base_texture_path)
+        # Find the corresponding .material file
+        material_file = find_material_file(material_name, search_folder)
+
+        # Apply the material from the file
+        apply_material_from_file(material_name, material_file, id_mapping_filepath, base_texture_path)
+
+# Run the main function to start the material processing and application
+main()
