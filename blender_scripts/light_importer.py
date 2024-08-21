@@ -13,8 +13,9 @@ def create_light(light_type, name, location, rotation_values, color, intensity, 
     light_data.energy = intensity * 10  # Multiply the light's strength by 10
 
     if light_type == 'AREA' and area_size:
-        light_data.size = area_size[0]
-        light_data.size_y = area_size[1]
+        light_data.shape = 'RECTANGLE' 
+        light_data.size = area_size[0] * 5.5
+        light_data.size_y = area_size[1] * 5.5
     
     if light_type == 'SPOT' and spot_cone:
         light_data.spot_size = spot_cone[1]  # Set outer cone angle
