@@ -14,3 +14,4 @@ Then, to import lights, just select the ones you want and import.
 
 To import lights, for the first time you need to install MurMur. Any other time, you just select the models you want to be set up and click set up materials.
 
+For the bitmaps, you need every bitmap, converted to png
