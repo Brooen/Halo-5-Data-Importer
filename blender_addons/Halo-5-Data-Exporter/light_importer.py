@@ -32,8 +32,6 @@ def create_light(light_type, name, location, rotation_values, color, intensity, 
     rotation.rotate_axis('Z', i)
 
     light_object.rotation_euler = rotation
-
-    bpy.context.collection.objects.link(light_object)
     
     return light_object
 
@@ -100,7 +98,7 @@ def read_binary_file_and_create_lights(filepaths):
                     spot_cone=(spot_inner_cone_angle, spot_outer_cone_area) if light_type == 'SPOT' else None
                 )
 
-                # Link the light to the collection
+                # Link the light directly to the collection (no context collection linking)
                 light_collection.objects.link(light_object)
 
                 print(f"Created light {index + 1} of type {light_type} in collection {collection_name}")
