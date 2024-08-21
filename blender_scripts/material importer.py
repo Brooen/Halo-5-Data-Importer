@@ -408,26 +408,41 @@ def main():
     base_texture_path = r"F:\halo models\Raw Files\H5 Textures"  # Base texture path
     id_mapping_filepath = r"C:\Users\abfer\Downloads\filepaths.txt"  # ID mapping file path
 
-    # Get the active object
-    obj = bpy.context.active_object
-    if not obj:
-        print("No active object found.")
+    # Keep track of processed materials
+    processed_materials = set()
+
+    # Get the selected objects
+    selected_objects = bpy.context.selected_objects
+    if not selected_objects:
+        print("No objects selected.")
         return
 
-    # Iterate through all materials on the active object
-    for material_slot in obj.material_slots:
-        material = material_slot.material
-        if not material:
-            continue  # Skip empty material slots
+    # Iterate through all selected objects
+    for obj in selected_objects:
+        print(f"Processing object: {obj.name}")
+        
+        # Iterate through all materials on the object
+        for material_slot in obj.material_slots:
+            material = material_slot.material
+            if not material:
+                continue  # Skip empty material slots
 
-        material_name = material.name
-        print(f"Processing material: {material_name}")
+            material_name = material.name
+            
+            # Check if the material has already been processed
+            if material_name in processed_materials:
+                print(f"Material '{material_name}' already processed. Skipping.")
+                continue
 
-        # Find the corresponding .material file
-        material_file = find_material_file(material_name, search_folder)
+            print(f"Processing material: {material_name}")
 
-        # Apply the material from the file
-        apply_material_from_file(material_name, material_file, id_mapping_filepath, base_texture_path)
+            # Find the corresponding .material file
+            material_file = find_material_file(material_name, search_folder)
 
+            # Apply the material from the file
+            apply_material_from_file(material_name, material_file, id_mapping_filepath, base_texture_path)
+
+            # Mark this material as processed
+            processed_materials.add(material_name)
 # Run the main function to start the material processing and application
 main()
