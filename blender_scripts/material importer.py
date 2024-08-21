@@ -169,6 +169,12 @@ def create_shader_in_blender(shader_name, parameters, material):
             # Connect the mapping node to the texture node
             links.new(mapping_node.outputs['Vector'], tex_node.inputs['Vector'])
             print(f"Connected mapping node to texture node.")
+            
+            alpha_param_name = f"{param_name}_alpha"
+            if alpha_param_name in parameters:
+                if alpha_param_name in group_node.inputs.keys():
+                    links.new(tex_node.outputs['Alpha'], group_node.inputs[alpha_param_name])
+                    print(f"Connected texture node alpha output to group node input '{alpha_param_name}'.")
 
             if param_data.get('normalized', 1) == 0:
                 # Find the existing Normalize node group
@@ -185,6 +191,7 @@ def create_shader_in_blender(shader_name, parameters, material):
                 if param_name in group_node.inputs.keys():
                     links.new(normalize_node.outputs['Vector'], group_node.inputs[param_name])
                     print(f"Connected normalize node output to group node input '{param_name}'.")
+                
             else:
                 # Connect the texture node directly to the appropriate input of the group node
                 if param_name in group_node.inputs.keys():
