@@ -149,6 +149,8 @@ def create_shader_in_blender(shader_name, parameters, material):
                     curve = "sRGB"
                 tex_node.image.colorspace_settings.name = curve
             print(f"Color space set to: {tex_node.image.colorspace_settings.name}")
+            
+            tex_node.image.alpha_mode = 'CHANNEL_PACKED'
 
             # Create a mapping node and set UV scale
             mapping_node = nodes.new('ShaderNodeMapping')
