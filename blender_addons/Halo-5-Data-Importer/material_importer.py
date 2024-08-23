@@ -344,21 +344,37 @@ def process_block(file, id_mapping, previous_id, string_table, base_texture_path
     return matching_string, parameters
 
 def process_secondary_header(file, id_mapping, string_table, base_texture_path, material):
-    # Skip the first 28 bytes
-    file.seek(28, 1)
+    def process_header_with_padding(padding_bytes):
+        file.seek(padding_bytes, 1)
+        
+        # Read the shader tag ID (u32)
+        shadertagID = read_u32(file)
+        print(f"Shader Tag ID: {shadertagID}")
+        
+        # Lookup the ID in the mapping
+        if shadertagID in id_mapping:
+            full_path = id_mapping[shadertagID]["path"]
+            filename = extract_filename_from_path(full_path)
+            print(f"Shader: {filename}")
+        else:
+            print(f"ID {shadertagID} not found in the mapping.")
+            filename = None
+        
+        return shadertagID, filename
     
-    # Read the shader tag ID (u32)
-    shadertagID = read_u32(file)
-    print(f"Shader Tag ID: {shadertagID}")
+    # Process the header with 28 bytes of padding
+    shadertagID, shader_name = process_header_with_padding(28)
     
-    # Lookup the ID in the mapping
-    if shadertagID in id_mapping:
-        full_path = id_mapping[shadertagID]["path"]
-        filename = extract_filename_from_path(full_path)
-        print(f"Shader: {filename}")
-    else:
-        print(f"ID {shadertagID} not found in the mapping.")
+    # If the shader tag ID is 0, re-process the header with 76 bytes of padding
+    if shadertagID == 0:
+        print("Shader Tag ID is 0, reprocessing with 76 bytes of padding...")
+        shadertagID, shader_name = process_header_with_padding(48)
     
+    # If shader_name is None after processing, return early
+    if shader_name is None:
+        print("No valid shader found. Skipping processing.")
+        return
+
     # Skip 32 bytes
     file.seek(32, 1)
     
@@ -370,7 +386,6 @@ def process_secondary_header(file, id_mapping, string_table, base_texture_path, 
     file.seek(60, 1)
 
     # Process each block based on material parameters count
-    shader_name = filename
     all_parameters = {}
 
     for _ in range(materialparameterscount):
