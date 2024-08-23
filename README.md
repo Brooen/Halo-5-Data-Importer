@@ -15,3 +15,10 @@ Then, to import lights, just select the ones you want and import.
 To import lights, for the first time you need to install MurMur. Any other time, you just select the models you want to be set up and click set up materials.
 
 For the bitmaps, you need every bitmap, converted to png
+
+## Credits
+- LordZedd - initial help with how halo 5's tag format works
+- Gravemind - help with fixing the light importer
+- Chiefster - making most of the shaders
+- TacoHombre - helping me test out the shaders and making new ones when needed
+- AxCut - helping me with the MurMur code in the material pattern file
