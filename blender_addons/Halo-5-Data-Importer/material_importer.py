@@ -240,10 +240,10 @@ def create_shader_in_blender(shader_name, parameters, material):
         links.new(group_node.outputs['Output'], material_output.inputs['Surface'])
         print(f"Connected group node 'Output' to material output surface.")
 
-    # Set the material to alpha blend if alpha is connected
+    # Set the material to alpha hashed if alpha is connected
     if alpha_connected:
-        material.blend_method = 'BLEND'
-        print(f"Material '{material.name}' set to alpha blend.")
+        material.blend_method = 'HASHED'
+        print(f"Material '{material.name}' set to alpha hashed.")
     else:
         print(f"Alpha was not connected for material '{material.name}'.")
 def process_block(file, id_mapping, previous_id, string_table, base_texture_path):
