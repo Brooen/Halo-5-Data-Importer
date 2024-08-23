@@ -84,6 +84,7 @@ def apply_material_from_file(material_name, material_file, id_mapping_filepath, 
     else:
         print(f"Material file for '{material_name}' not found.")
 
+
 def create_shader_in_blender(shader_name, parameters, material):
     """Creates or updates a shader node group in Blender and applies it to the given material."""
     # Ensure the node group exists
@@ -122,6 +123,8 @@ def create_shader_in_blender(shader_name, parameters, material):
     y_offset = 0
     y_step = -300  # Vertical spacing between nodes
     
+    alpha_connected = False
+
     for param_name, param_data in parameters.items():
         print(f"Processing parameter '{param_name}' of type '{param_data['type']}'")
 
@@ -170,11 +173,19 @@ def create_shader_in_blender(shader_name, parameters, material):
             links.new(mapping_node.outputs['Vector'], tex_node.inputs['Vector'])
             print(f"Connected mapping node to texture node.")
             
-            alpha_param_name = f"{param_name}_alpha"
-            if alpha_param_name in parameters:
-                if alpha_param_name in group_node.inputs.keys():
-                    links.new(tex_node.outputs['Alpha'], group_node.inputs[alpha_param_name])
-                    print(f"Connected texture node alpha output to group node input '{alpha_param_name}'.")
+            # Check if the node group has an _alpha input
+            alpha_input_name = f"{param_name}_alpha"
+            print(f"Checking for alpha input '{alpha_input_name}' in node group...")
+            if alpha_input_name in group_node.inputs.keys():
+                print(f"'{alpha_input_name}' exists in group node inputs. Connecting alpha...")
+                links.new(tex_node.outputs['Alpha'], group_node.inputs[alpha_input_name])
+                print(f"Connected texture node alpha output to group node input '{alpha_input_name}'.")
+                # Set alpha_connected to True if the alpha is connected to specific inputs
+                if param_name in ['surface_color_map', 'color_map']:
+                    alpha_connected = True
+                    print(f"Alpha connected for '{param_name}', setting material blend method to 'BLEND'.")
+            else:
+                print(f"Alpha input '{alpha_input_name}' not found in node group inputs.")
 
             if param_data.get('normalized', 1) == 0:
                 # Find the existing Normalize node group
@@ -228,7 +239,13 @@ def create_shader_in_blender(shader_name, parameters, material):
     if group_node.outputs.get('Output'):
         links.new(group_node.outputs['Output'], material_output.inputs['Surface'])
         print(f"Connected group node 'Output' to material output surface.")
-                
+
+    # Set the material to alpha blend if alpha is connected
+    if alpha_connected:
+        material.blend_method = 'BLEND'
+        print(f"Material '{material.name}' set to alpha blend.")
+    else:
+        print(f"Alpha was not connected for material '{material.name}'.")
 def process_block(file, id_mapping, previous_id, string_table, base_texture_path):
     # Read the raw parameter name (4 bytes)
     parameter_name_bytes = file.read(4)
@@ -290,7 +307,7 @@ def process_block(file, id_mapping, previous_id, string_table, base_texture_path
 
     elif parameter_type == 4:  # color
         parameter_index = read_u32(file)
-        file.seek(36, 1)  # Skip 8 bytes of padding
+        file.seek(36, 1)  # Skip 36 bytes of padding
         argb = struct.unpack('<4f', file.read(16))
         
         # Convert ARGB to RGBA
@@ -301,28 +318,28 @@ def process_block(file, id_mapping, previous_id, string_table, base_texture_path
             'value': rgba, 
             'normalized': id_mapping.get(previous_id, {}).get('normalized', 1)  # Pass the normalized value
         }
-        file.seek(168, 1)  # Skip 124 bytes of padding
+        file.seek(168, 1)  # Skip 168 bytes of padding
 
     elif parameter_type == 1:  # real
         parameter_index = read_u32(file)
-        file.seek(52, 1)  # Skip 8 bytes of padding
+        file.seek(52, 1)  # Skip 52 bytes of padding
         real_value = struct.unpack('<f', file.read(4))[0]
         parameters[matching_string] = {'type': 'real', 'value': real_value}
-        file.seek(164, 1)  # Skip 124 bytes of padding
+        file.seek(164, 1)  # Skip 164 bytes of padding
 
     elif parameter_type == 3:  # boolean
         parameter_index = read_u32(file)
-        file.seek(68, 1)  # Skip 8 bytes of padding
+        file.seek(68, 1)  # Skip 68 bytes of padding
         boolean_value = read_u32(file)
         parameters[matching_string] = {'type': 'boolean', 'value': bool(boolean_value)}
-        file.seek(148, 1)  # Skip 124 bytes of padding
+        file.seek(148, 1)  # Skip 148 bytes of padding
 
     elif parameter_type == 2:  # int
         parameter_index = read_u32(file)
-        file.seek(68, 1)  # Skip 8 bytes of padding
+        file.seek(68, 1)  # Skip 68 bytes of padding
         int_value = read_u32(file)
         parameters[matching_string] = {'type': 'int', 'value': int_value}
-        file.seek(148, 1)  # Skip 124 bytes of padding
+        file.seek(148, 1)  # Skip 148 bytes of padding
 
     return matching_string, parameters
 
@@ -444,6 +461,4 @@ def main(search_folder, base_texture_path, run_on_selected=True):
             apply_material_from_file(material_name, material_file, id_mapping_filepath, base_texture_path)
 
             # Mark this material as processed
-            processed_materials.add(material_name)     
-# Run the main function to start the material processing and application
-
+            processed_materials.add(material_name)  
