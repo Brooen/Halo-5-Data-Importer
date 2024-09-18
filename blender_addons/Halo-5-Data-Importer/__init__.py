@@ -9,7 +9,7 @@ from bpy.types import AddonPreferences, Operator, Panel, PropertyGroup, UIList
 bl_info = {
     "name": "Halo 5 Data Importer",
     "author": "Brooen",    
-    "blender": (4, 1, 1),
+    "blender": (4, 2, 1),
     "category": "Object",
 }
 
