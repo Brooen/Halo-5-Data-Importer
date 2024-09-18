@@ -8,7 +8,7 @@
 .structure_lights
 
 ## How to Use
-First, you need the halo 5 console files, then you need to put all of the .material and .structure_lights files into their own folders
+First, you need the halo 5 console files, then you need to put all of the .material and .structure_lights files into their own folders. For lights, they all need to be in 1 directory, for materials, they need to keep their file hierarchy.
 
 Then, to import lights, just select the ones you want and import.
 
