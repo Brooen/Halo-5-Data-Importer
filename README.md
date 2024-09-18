@@ -22,3 +22,4 @@ For the bitmaps, you need every bitmap, converted to png
 - Chiefster - making most of the shaders
 - TacoHombre - helping me test out the shaders and making new ones when needed
 - AxCut - helping me with the MurMur code in the material pattern file
+- Surasia - new module tool that let me export induvidual tag types instead of everything at once
