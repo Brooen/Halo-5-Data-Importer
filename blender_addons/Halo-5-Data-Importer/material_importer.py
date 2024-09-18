@@ -57,13 +57,30 @@ def extract_filename_from_path(file_path):
     # Extract the file name without the extension
     return file_path.split('\\')[-1].split('.')[0]
 
+
 def find_material_file(material_name, search_folder):
-    """Find the corresponding .material file for a given material name in the specified folder."""
-    for root, dirs, files in os.walk(search_folder):
-        for file in files:
-            if file.lower() == f"{material_name.lower()}.material":
-                return os.path.join(root, file)
-    return None
+    """Find the corresponding .material file for a given material name in the specified folder based on its tag_name property."""
+    # Retrieve the material object from Blender's data
+    material = bpy.data.materials.get(material_name)
+    if not material:
+        print(f"Material '{material_name}' not found in bpy.data.materials.")
+        return None
+
+    # Access the custom property 'tag_name'
+    tag_name = material.get('tag_name')
+    if not tag_name:
+        print(f"Material '{material_name}' does not have a 'tag_name' custom property.")
+        return None
+
+    # Construct the full path to the material file
+    material_path = os.path.join(search_folder, tag_name + '.material')
+    # Normalize the path to handle different OS path separators
+    material_path = os.path.normpath(material_path)
+    if os.path.isfile(material_path):
+        return material_path
+    else:
+        print(f"Material file '{material_path}' does not exist.")
+        return None
 
 def apply_material_from_file(material_name, material_file, id_mapping_filepath, base_texture_path):
     """Apply the material processed from a .material file to the selected Blender material."""
