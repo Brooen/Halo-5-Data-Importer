@@ -19,6 +19,7 @@ For the bitmaps, you need every bitmap, converted to png
 ## Download Options
 
 [Latest Release](https://github.com/Brooen/Halo-5-Data-Importer/releases/latest "Latest Release")
+
 [Latest Test Build](https://github.com/Brooen/Halo-5-Data-Importer/raw/refs/heads/main/blender_addons/Halo-5-Data-Importer.zip "Latest Test Build")
 
 ## Credits
