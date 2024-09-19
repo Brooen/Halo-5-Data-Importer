@@ -16,6 +16,12 @@ To import lights, for the first time you need to install MurMur. Any other time,
 
 For the bitmaps, you need every bitmap, converted to png
 
+## Download Options
+
+[Latest Release](https://github.com/Brooen/Halo-5-Data-Importer/releases/latest "Latest Release")
+
+[Latest Test Build](https://github.com/Brooen/Halo-5-Data-Importer/raw/refs/heads/main/blender_addons/Halo-5-Data-Importer.zip "Latest Test Build")
+
 ## Credits
 - LordZedd - initial help with how halo 5's tag format works
 - Gravemind - help with fixing the light importer
