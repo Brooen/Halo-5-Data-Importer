@@ -38,7 +38,7 @@ def create_light(light_type, name, location, rotation_values, color, intensity, 
 def read_binary_file_and_create_lights(filepaths):
     for filepath in filepaths:
         # Create a collection named after the file path (using the file name)
-        collection_name = os.path.splitext(os.path.basename(filepath))[0]
+        collection_name = os.path.splitext(os.path.basename(filepath))[0] + " lights"
         light_collection = bpy.data.collections.new(collection_name)
         bpy.context.scene.collection.children.link(light_collection)
 
