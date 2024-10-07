@@ -159,12 +159,38 @@ class FILE_OT_run_material_importer(Operator):
         self.report({'INFO'}, "Materials processed successfully")
         return {'FINISHED'}
 
+# Operator to run the material cleaner script
+class FILE_OT_run_material_cleaner(Operator):
+    bl_idname = "file.run_material_cleaner"
+    bl_label = "Run Material Cleaner"
+
+    def execute(self, context):
+        # Get the path to the material_cleaner.py script
+        script_path = os.path.join(os.path.dirname(__file__), "material_cleaner.py")
+
+        if os.path.exists(script_path):
+            # Import and run the material cleaner script
+            spec = importlib.util.spec_from_file_location("material_cleaner", script_path)
+            material_cleaner = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(material_cleaner)
+
+            # Run the main function in the material_cleaner script
+            material_cleaner.main()
+        else:
+            self.report({'ERROR'}, "Material cleaner script not found.")
+            return {'CANCELLED'}
+
+        self.report({'INFO'}, "Material cleaner processed successfully.")
+        return {'FINISHED'}
+        
 # UIList to display the files with checkboxes
 class FILE_UL_light_file_list(UIList):
+    bl_idname = "FILE_UL_light_file_list"
+
     def draw_item(self, context, layout, data, item, icon, active_data, active_propname, index):
         layout.prop(item, "select", text="")
         layout.label(text=item.name, icon='FILE')
-
+        
 # Panel for the Addon UI in the Viewport Side Panel (N-Panel)
 class VIEW3D_PT_light_importer_panel(Panel):
     bl_idname = "VIEW3D_PT_light_importer_panel"
@@ -190,6 +216,11 @@ class VIEW3D_PT_light_importer_panel(Panel):
         box.operator("file.install_mmh3", text="Install MurMur Hash")
         box.operator("file.run_material_importer", text="Run Material Importer")
 
+        # Other Section
+        box = layout.box()
+        box.label(text="Other")
+        box.operator("file.run_material_cleaner", text="Run Material Cleaner")
+
 # Register and Unregister Classes
 classes = (
     LightFileItem,
@@ -198,6 +229,7 @@ classes = (
     FILE_OT_import_lights,
     FILE_OT_install_mmh3,
     FILE_OT_run_material_importer,
+    FILE_OT_run_material_cleaner,  # Register the new operator here
     FILE_UL_light_file_list,
     VIEW3D_PT_light_importer_panel,
 )
