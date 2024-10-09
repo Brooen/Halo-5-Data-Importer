@@ -148,9 +148,19 @@ def create_shader_in_blender(shader_name, parameters, material):
         if param_data['type'] == 'bitmap':
             # Load the image texture
             texture_path = param_data['value']
-            print(f"Loading texture from path: {texture_path}")
-            image = bpy.data.images.load(texture_path)
+            image_name = os.path.basename(texture_path)
             
+            # Check if the image is already loaded in Blender
+            image = bpy.data.images.get(image_name)
+            if image is None:
+                # If not found, load the image from the file
+                print(f"Loading texture from path: {texture_path}")
+                try:
+                    image = bpy.data.images.load(texture_path)
+                except RuntimeError:
+                    print(f"Failed to load image: {texture_path}. Skipping this texture.")
+                    continue  # Skip to the next parameter if the image fails to load
+
             # Create the texture node
             tex_node = nodes.new('ShaderNodeTexImage')
             tex_node.name = param_name
