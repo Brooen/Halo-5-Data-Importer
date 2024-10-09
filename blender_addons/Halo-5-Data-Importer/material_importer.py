@@ -389,17 +389,22 @@ def process_secondary_header(file, id_mapping, string_table, base_texture_path, 
         
         return shadertagID, filename
     
-    # Process the header with 28 bytes of padding
+    # Process the header with default padding
     shadertagID, shader_name = process_header_with_padding(28)
     
-    # If the shader tag ID is 0, re-process the header with 76 bytes of padding
-    if shadertagID == 0:
-        print("Shader Tag ID is 0, reprocessing with 76 bytes of padding...")
+    # If the shader tag ID is 0 or shader_name is None, re-process with 76 bytes of padding
+    if shadertagID == 0 or shader_name is None:
+        print("Shader Tag ID is 0 or no valid shader found, reprocessing with 76 bytes of padding...")
         shadertagID, shader_name = process_header_with_padding(48)
     
-    # If shader_name is None after processing, return early
+    # If shader_name is still None, re-process with 104 bytes of padding
     if shader_name is None:
-        print("No valid shader found. Skipping processing.")
+        print("No valid shader found with 76 bytes, reprocessing with 96 bytes of padding...")
+        shadertagID, shader_name = process_header_with_padding(48)
+    
+    # If shader_name is still None after processing all options, return early
+    if shader_name is None:
+        print("No valid shader found after all padding attempts. Skipping processing.")
         return
 
     # Skip 32 bytes
