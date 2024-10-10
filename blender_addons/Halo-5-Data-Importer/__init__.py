@@ -117,26 +117,29 @@ class FILE_OT_install_mmh3(Operator):
             self.report({'ERROR'}, f"Failed to install mmh3: {e}")
         return {'FINISHED'}
 
-# Operator to run the material importer script
 class FILE_OT_run_material_importer(Operator):
     bl_idname = "file.run_material_importer"
     bl_label = "Run Material Importer"
 
     def execute(self, context):
         prefs = context.preferences.addons[__name__].preferences
+        addon_directory = os.path.dirname(__file__)  # Define addon_directory here
 
-        # Append Shaders nodegroup from Shaders.blend
-        addon_directory = os.path.dirname(__file__)
-        shaders_blend = os.path.join(addon_directory, "Shaders.blend")
-        if os.path.exists(shaders_blend):
-            with bpy.data.libraries.load(shaders_blend, link=False) as (data_from, data_to):
-                if "Shaders" in data_from.node_groups:
-                    data_to.node_groups = ["Shaders"]
-                    self.report({'INFO'}, "Appended Shaders nodegroup from Shaders.blend.")
-                else:
-                    self.report({'WARNING'}, "Shaders nodegroup not found in Shaders.blend.")
+        # Check if the Shaders node group already exists
+        if "Shaders" not in bpy.data.node_groups:
+            # Append Shaders nodegroup from Shaders.blend
+            shaders_blend = os.path.join(addon_directory, "Shaders.blend")
+            if os.path.exists(shaders_blend):
+                with bpy.data.libraries.load(shaders_blend, link=False) as (data_from, data_to):
+                    if "Shaders" in data_from.node_groups:
+                        data_to.node_groups = ["Shaders"]
+                        self.report({'INFO'}, "Appended Shaders nodegroup from Shaders.blend.")
+                    else:
+                        self.report({'WARNING'}, "Shaders nodegroup not found in Shaders.blend.")
+            else:
+                self.report({'WARNING'}, "Shaders.blend file not found.")
         else:
-            self.report({'WARNING'}, "Shaders.blend file not found.")
+            self.report({'INFO'}, "Shaders nodegroup already exists in the file.")
 
         # Import and run the material importer script
         script_path = os.path.join(addon_directory, "material_importer.py")
