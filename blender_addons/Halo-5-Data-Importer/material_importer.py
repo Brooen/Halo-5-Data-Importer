@@ -238,8 +238,14 @@ def create_shader_in_blender(shader_name, parameters, material):
 
         elif param_data['type'] == 'color':
             if param_name in group_node.inputs.keys():
-                group_node.inputs[param_name].default_value = param_data['value']
-                print(f"Set color parameter '{param_name}' to {param_data['value']}")
+                try:
+                    # Try setting the entire color value (rgba)
+                    group_node.inputs[param_name].default_value = param_data['value']
+                    print(f"Set color parameter '{param_name}' to {param_data['value']}")
+                except TypeError:
+                    # If there's a type error (e.g., float socket expecting a single value), use the red channel (r)
+                    group_node.inputs[param_name].default_value = param_data['value'][0]  # Use the red component
+                    print(f"Color parameter '{param_name}' expected a float, setting to red component: {param_data['value'][0]}")
 
         elif param_data['type'] == 'real':
             if param_name in group_node.inputs.keys():
